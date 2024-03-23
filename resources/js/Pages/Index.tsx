@@ -37,14 +37,23 @@ import {
     AlertDialogTrigger,
 } from "@/Components/ui/alert-dialog"
 
-import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,} from "@/Components/ui/dialog"
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/Components/ui/dialog"
 
 import {Label} from "@/Components/ui/label"
 import {Dropzone, FileMosaic, ImagePreview} from "@files-ui/react";
 import {Textarea} from "@/Components/ui/textarea"
 import {router, useForm} from "@inertiajs/react";
+import {toast, useToast} from "@/Components/ui/use-toast";
 
-const ProductForm = () => {
+const ProductForm = ({onUpdateProducts}: any) => {
     const [extFiles, setExtFiles] = React.useState([]);
     const [imageSrc, setImageSrc] = React.useState(undefined);
 
@@ -67,80 +76,114 @@ const ProductForm = () => {
         formData.append('name', data.name);
         formData.append('description', data.description);
 
-        let req = await fetch('api/pumps', {
-            method: 'POST',
-            body: formData
-        })
+        try {
+            let req = await fetch('api/pumps', {
+                method: 'POST',
+                body: formData
+            })
 
-        let lastProduct = await req.json();
+            if(req.ok) {
+                let newProduct = await req.json();
+                onUpdateProducts(newProduct);
+
+                toast({
+                    title: 'Sucesso!',
+                    description: "Produto adicionado com sucesso!",
+                })
+                setData({ file: null, name: '', description: '' });
+
+            }else {
+                toast({
+                    variant: "destructive",
+                    title: "Ops!",
+                    description: "Falha ao adicionar produto!"
+                });
+            }
+        }catch(error) {
+            console.error('Error adding product:', error);
+            toast({
+                variant: "destructive",
+                title: "Ops!",
+                description: "Falha ao adicionar produto!"
+            });
+        }
     }
 
     return (
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Adicionar Produto</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-                <Dropzone
-                    onChange={updateFiles}
-                    minHeight="195px"
-                    value={extFiles}
-                    accept="image/*"
-                    maxFiles={1}
-                    maxFileSize={2 * 2048 * 1024}
-                    label="Drag'n drop files here or click to browse"
-                    uploadConfig={{
-                        // autoUpload: true
-                        cleanOnUpload: true,
-                    }}
-                >
-                    {extFiles.map((file: any) => (
-                        <FileMosaic
-                            {...file}
-                            key={file.id}
-                            resultOnTooltip
-                            alwaysActive
-                            preview
-                            info
+        <Dialog>
+            <DialogTrigger asChild>
+                <div className='flex justify-center'><Button className='bg-[#16628E] text-white mb-1' variant="outline">Adicionar Produto</Button></div>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Adicionar Produto</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <Dropzone
+                        onChange={updateFiles}
+                        minHeight="195px"
+                        value={extFiles}
+                        accept="image/*"
+                        maxFiles={1}
+                        maxFileSize={2 * 2048 * 1024}
+                        label="Drag'n drop files here or click to browse"
+                        uploadConfig={{
+                            // autoUpload: true
+                            cleanOnUpload: true,
+                        }}
+                    >
+                        {extFiles.map((file: any) => (
+                            <FileMosaic
+                                {...file}
+                                key={file.id}
+                                resultOnTooltip
+                                alwaysActive
+                                preview
+                                info
+                            />
+                        ))}
+                    </Dropzone>
+                    <ImagePreview src={imageSrc} />
+                    <div className="grid grid-cols-2 items-center gap-2">
+                        <Label htmlFor="name">
+                            Nome
+                        </Label>
+                        <Input
+                            name="name"
+                            required
+                            placeholder='Nome do Produto...'
+                            className="col-span-3"
+                            value={data.name}
+                            onChange={(e) => setData('name', e.target.value)}
                         />
-                    ))}
-                </Dropzone>
-                <ImagePreview src={imageSrc} />
-                <div className="grid grid-cols-2 items-center gap-2">
-                    <Label htmlFor="name">
-                        Nome
-                    </Label>
-                    <Input
-                        name="name"
-                        placeholder='Nome do Produto...'
-                        className="col-span-3"
-                        value={data.name}
-                        onChange={(e) => setData('name', e.target.value)}
-                    />
+                    </div>
+                    <div className="grid grid-cols-2 items-center gap-2">
+                        <Label htmlFor="username">
+                            Descrição
+                        </Label>
+                        <Textarea
+                            required
+                            name="description"
+                            className="col-span-3"
+                            placeholder="Descrição do Produto..."
+                            value={data.description}
+                            onChange={(e) => setData('description', e.target.value)}
+                        />
+                    </div>
                 </div>
-                <div className="grid grid-cols-2 items-center gap-2">
-                    <Label htmlFor="username">
-                        Descrição
-                    </Label>
-                    <Textarea
-                        name="description"
-                        className="col-span-3"
-                        placeholder="Descrição do Produto..."
-                        value={data.description}
-                        onChange={(e) => setData('description', e.target.value)}
-                    />
-                </div>
-            </div>
-            <DialogFooter>
-                <Button
-                    className='bg-[#16628E]'
-                    type="submit"
-                    onClick={submit}
-                >
-                    Adicionar Produto
-                </Button>
-            </DialogFooter>
-        </DialogContent>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button
+                            className='bg-[#16628E]'
+                            type="submit"
+                            onClick={submit}
+                        >
+                            Adicionar Produto
+                        </Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     )
 }
 
@@ -211,87 +254,84 @@ export type Product = {
     description: string
 }
 
-export const columns: ColumnDef<Product>[] = [
-    {
-        accessorKey: "image_url",
-        header: "Imagem",
-        cell: ({row}) => (
-            <img src={row.getValue("image_url")} className='capitalize' />
-        ),
-    },
-    {
-        accessorKey: "name",
-        header: ({column}) => {
-            return (
-                <Button
-                    variant="ghost"
-                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-                >
-                    Nome
-                    <ArrowUpDown className="ml-2 h-4 w-4"/>
-                </Button>
-            )
-        },
-        cell: ({row}) => <div className="font-medium ml-3 lowercase">{row.getValue("name")}</div>,
-    },
-    {
-        accessorKey: "description",
-        header: () => <div>Descrição</div>,
-        cell: ({row}) => <div>{row.getValue('description')}</div>,
-    },
-    {
-        id: "actions",
-        enableHiding: false,
-        header: () => <div>Ação</div>,
-        cell: ({row}) => {
-            const payment = row.original
-
-            return (
-                <AlertDialog>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Abrir menu</span>
-                                <MoreHorizontal className="h-4 w-4"/>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                            <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
-                            <DropdownMenuItem>Editar</DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <AlertDialogTrigger asChild>
-                                    <div className='w-full'>Excluir</div>
-                                </AlertDialogTrigger>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Você tem certeza que deseja excluir este produto?
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction className='bg-red-500'>Excluir</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            )
-        },
-    },
-]
-
-export function DataTableDemo({data}: any) {
+export function DataTableDemo({ data, onDelete }: any) {
     const [sorting, setSorting] = React.useState<SortingState>([])
-    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-        []
-    )
-    const [columnVisibility, setColumnVisibility] =
-        React.useState<VisibilityState>({})
+    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+    const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
     const [rowSelection, setRowSelection] = React.useState({})
+
+    const columns: ColumnDef<Product>[] = [
+        {
+            accessorKey: "image_url",
+            header: "Imagem",
+            cell: ({row}) => (
+                <img src={row.getValue("image_url")} className='capitalize' />
+            ),
+        },
+        {
+            accessorKey: "name",
+            header: ({column}) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    >
+                        Nome
+                        <ArrowUpDown className="ml-2 h-4 w-4"/>
+                    </Button>
+                )
+            },
+            cell: ({row}) => <div className="font-medium ml-3 lowercase">{row.getValue("name")}</div>,
+        },
+        {
+            accessorKey: "description",
+            header: () => <div>Descrição</div>,
+            cell: ({row}) => <div>{row.getValue('description')}</div>,
+        },
+        {
+            id: "actions",
+            enableHiding: false,
+            header: () => <div>Ação</div>,
+            cell: ({row}) => {
+                return (
+                    <TableCell>
+                        <AlertDialog>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                        <span className="sr-only">Abrir menu</span>
+                                        <MoreHorizontal className="h-4 w-4"/>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                    <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
+                                    <DropdownMenuItem>Editar</DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                        <AlertDialogTrigger asChild>
+                                            <div className='w-full'>Excluir</div>
+                                        </AlertDialogTrigger>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Você tem certeza que deseja excluir este produto?
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleProductDeletion(row.original.id)} className='bg-red-500'>Excluir</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </TableCell>
+                )
+            },
+        },
+    ]
 
     const table = useReactTable({
         data,
@@ -312,15 +352,13 @@ export function DataTableDemo({data}: any) {
         },
     })
 
+    const handleProductDeletion = (id: number) => {
+        onDelete(id);
+    }
+
     return (
         <div className='container'>
             <div className="w-full">
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <div className='flex justify-center'><Button className='bg-[#16628E] text-white mb-1' variant="outline">Adicionar Produto</Button></div>
-                    </DialogTrigger>
-                    <ProductForm />
-                </Dialog>
                 <div className="rounded-md border">
                     <Table>
                         <TableHeader>
@@ -356,6 +394,25 @@ export function DataTableDemo({data}: any) {
                                                 )}
                                             </TableCell>
                                         ))}
+                                        {/*<TableCell>*/}
+                                        {/*    <AlertDialog>*/}
+                                        {/*        <AlertDialogTrigger asChild>*/}
+                                        {/*            <Button variant="ghost">Excluir</Button>*/}
+                                        {/*        </AlertDialogTrigger>*/}
+                                        {/*        <AlertDialogContent>*/}
+                                        {/*            <AlertDialogHeader>*/}
+                                        {/*                <AlertDialogTitle>Tem certeza?</AlertDialogTitle>*/}
+                                        {/*                <AlertDialogDescription>*/}
+                                        {/*                    Você tem certeza que deseja excluir este produto?*/}
+                                        {/*                </AlertDialogDescription>*/}
+                                        {/*            </AlertDialogHeader>*/}
+                                        {/*            <AlertDialogFooter>*/}
+                                        {/*                <AlertDialogCancel>Cancelar</AlertDialogCancel>*/}
+                                        {/*                <AlertDialogAction onClick={() => handleProductDeletion(row.original.id)} className='bg-red-500'>Excluir</AlertDialogAction>*/}
+                                        {/*            </AlertDialogFooter>*/}
+                                        {/*        </AlertDialogContent>*/}
+                                        {/*    </AlertDialog>*/}
+                                        {/*</TableCell>*/}
                                     </TableRow>
                                 ))
                             ) : (
@@ -403,7 +460,7 @@ export const Icons = {
 export default function Index() {
     const [allPumps, setAllPumps] = useState([]);
     const [loading, setLoading] = useState(true);
-
+    const { toast } = useToast()
 
     useEffect(() => {
         async function getAllPumps() {
@@ -420,15 +477,56 @@ export default function Index() {
         getAllPumps();
     }, []);
 
+    const handleDeleteProduct = async (productId: number) => {
+
+        try {
+            const response = await fetch(`api/pumps/delete/${productId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                setAllPumps(allPumps.filter(product => product.id !== productId));
+                toast({
+                    title: 'Sucesso!',
+                    description: "Produto excluído com sucesso!",
+                })
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Ops!",
+                    description: "Ocorreu um erro ao excluir este produto."
+                })
+                console.error('Failed to delete product:', response.statusText);
+            }
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Ops!",
+                description: "Ocorreu um erro ao excluir este produto."
+            })
+            console.error('Error deleting product:', error);
+        }
+    }
+
+    const updateProducts = (newProduct: any) => {
+        // @ts-ignore
+        setAllPumps([...allPumps, newProduct]);
+    }
+
     if (loading) {
         return (
-            <div className="w-full h-full fixed top-0 left-0 bg-white opacity-75 z-50">
+            <div className="w-full h-full fixed top-0 left-0 bg-black opacity-75 z-50">
                 <div className="flex justify-center items-center mt-[45vh]">
-                    <Icons.spinner className="h-20 w-20 animate-spin"/>
+                    <Icons.spinner className="h-20 w-20 animate-spin text-white"/>
                 </div>
             </div>
         )
     }
 
-    return <DataTableDemo data={allPumps} />;
+    return (
+        <>
+            <ProductForm onUpdateProducts={updateProducts} data={allPumps} />
+            <DataTableDemo data={allPumps} onDelete={handleDeleteProduct} />
+        </>
+    );
 }

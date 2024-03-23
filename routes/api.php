@@ -20,3 +20,5 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::post('/pumps', [PumpController::class, 'create'])->name('pumps.create');
+Route::delete('/pumps/delete/{id}', [PumpController::class, 'delete'])->name('pumps.delete');
+

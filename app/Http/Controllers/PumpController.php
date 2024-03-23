@@ -35,10 +35,11 @@ class PumpController extends Controller
 
         $id = $pump->id;
 
-//        return Inertia::render('Index', [
-//            'pumps' => Pump::find($id)
-//        ]);
-
         return response()->json(Pump::find($id));
+    }
+
+    public function delete($id) {
+        $pump = Pump::find($id);
+        $pump->delete();
     }
 }
